@@ -3,172 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- Force browser to bypass GitHub CDN caching -->
-    <meta http-equiv="cache-control" content="no-cache">
-    <meta http-equiv="expires" content="0">
-    <meta http-equiv="pragma" content="no-cache">
     <title>VIN Barcode Generator</title>
-    <link href="https://googleapis.com" rel="stylesheet">
-    <!-- Only one ultra-reliable library used for drawing the bars -->
-    <script src="https://jsdelivr.net"></script>
-
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding: 15px;
-            background-color: #f8fafc;
-            color: #0f172a;
-            text-align: center;
-        }
-        .container {
-            max-width: 450px;
-            margin: 20px auto;
-            background: #ffffff;
-            padding: 24px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        }
-        h1 { font-size: 20px; margin-bottom: 5px; color: #1e293b; }
-        p { font-size: 13px; color: #64748b; margin-bottom: 20px; }
-        
-        .input-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-        label {
-            display: block;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: #475569;
-        }
-        input {
-            width: 100%;
-            padding: 14px;
-            font-size: 18px;
-            border: 2px solid #cbd5e1;
-            border-radius: 10px;
-            box-sizing: border-box;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-family: monospace;
-        }
-        input:focus {
-            border-color: #2563eb;
-            outline: none;
-        }
-        .btn {
-            background-color: #2563eb;
-            color: white;
-            border: none;
-            padding: 16px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 10px;
-            cursor: pointer;
-            width: 100%;
-            box-shadow: 0 2px 4px rgba(37,99,235,0.2);
-        }
-        .btn:active { background-color: #1d4ed8; }
-        
-        .result-box {
-            margin-top: 25px;
-            padding-top: 20px;
-            border-top: 2px dashed #e2e8f0;
-            display: none;
-        }
-        #vin-display {
-            font-size: 18px;
-            font-weight: 600;
-            letter-spacing: 2px;
-            color: #0f172a;
-            margin-bottom: 15px;
-        }
-        #barcode-wrapper {
-            background: white;
-            padding: 15px 5px;
-            display: inline-block;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        #barcode {
-            width: 100%;
-            height: auto;
-            max-height: 130px;
-        }
-        .error-msg {
-            color: #dc2626;
-            font-size: 13px;
-            margin-top: 5px;
-            display: none;
-            font-weight: 500;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background-color: #f1f5f9; text-align: center; color: #1e293b; }
+        .card { max-width: 420px; margin: 20px auto; background: #ffffff; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); box-sizing: border-box; }
+        h1 { font-size: 20px; margin: 0 0 4px 0; color: #0f172a; }
+        p { font-size: 13px; color: #64748b; margin: 0 0 20px 0; }
+        label { display: block; text-align: left; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #475569; }
+        input { width: 100%; padding: 14px; font-size: 18px; border: 2px solid #cbd5e1; border-radius: 10px; box-sizing: border-box; text-transform: uppercase; letter-spacing: 1px; font-family: monospace; outline: none; }
+        input:focus { border-color: #2563eb; }
+        button { background-color: #2563eb; color: white; border: none; padding: 16px; font-size: 16px; font-weight: 600; border-radius: 10px; cursor: pointer; width: 100%; margin-top: 15px; }
+        button:active { background-color: #1d4ed8; }
+        .error { color: #dc2626; font-size: 13px; margin-top: 6px; display: none; text-align: left; font-weight: 500; }
+        .output { margin-top: 25px; padding-top: 20px; border-top: 2px dashed #e2e8f0; display: none; }
+        .vin-text { font-size: 18px; font-weight: bold; letter-spacing: 2px; margin-bottom: 12px; font-family: monospace; }
+        .barcode-box { background: white; padding: 12px; display: block; overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
+        svg { display: block; margin: 0 auto; min-width: 320px; height: 100px; }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="card">
     <h1>VIN to Barcode</h1>
-    <p>For Midtronics Battery Testers</p>
+    <p>Optimized for Midtronics Testers</p>
     
-    <div class="input-group">
-        <label for="vin-input">Enter or Scan 17-Digit VIN:</label>
-        <!-- Autofocus triggers mobile keyboards immediately. 
-             If using iPhone, tap the text box and choose "Scan Text" to use Apple's native OCR camera! -->
-        <input type="text" id="vin-input" placeholder="ENTER 17 CHARACTERS" maxlength="17" autocomplete="off" autocapitalize="characters">
-        <div class="error-msg" id="error-text">VIN must be exactly 17 characters.</div>
-    </div>
+    <label for="vin">Enter or Paste 17-Digit VIN:</label>
+    <!-- Tap this box on an iPhone and choose "Scan Text" to use your built-in Apple camera to auto-read paper! -->
+    <input type="text" id="vin" placeholder="ENTER 17 CHARACTERS" maxlength="17" autocomplete="off" autocapitalize="characters">
+    <div class="error" id="err">VIN must be exactly 17 valid characters.</div>
     
-    <button class="btn" id="generate-btn">Generate Barcode</button>
+    <button onclick="makeBarcode()">Generate Barcode</button>
     
-    <div class="result-box" id="result-section">
-        <div id="vin-display">---</div>
-        <div id="barcode-wrapper">
-            <svg id="barcode"></svg>
+    <div class="output" id="out">
+        <div class="vin-text" id="vtxt"></div>
+        <div class="barcode-box">
+            <svg id="bcode" xmlns="http://w3.org"></svg>
         </div>
     </div>
 </div>
 
 <script>
-    const vinInput = document.getElementById('vin-input');
-    const generateBtn = document.getElementById('generate-btn');
-    const resultSection = document.getElementById('result-section');
-    const vinDisplay = document.getElementById('vin-display');
-    const errorText = document.getElementById('error-text');
+    // Pure Javascript Native Code-128 Generator (No external file dependencies)
+    const C128 = [
+        212222,222122,222221,121223,121322,131222,122213,122312,132212,221213,
+        221312,231212,112232,122132,122231,113222,123122,123221,223211,221132,
+        221231,213212,223112,312131,311222,312212,312221,311123,311321,313121,
+        211322,213122,213221,111332,113132,113331,112313,113213,122313,112331,
+        113231,131132,131231,132211,212312,231122,231221,112214,112412,133112,
+        142112,114122,114221,112241,112421,124112,124221,141122,141221,112211,
+        211142,214112,221114,211213,211312,211412,233111,211241,211421,221123,
+        221321,221712,221111,221211,211212,211212,211212,211212,211212,211212,
+        121211,121211,121211,121211,121211,121211,121211,121211,121211,121211,
+        211212,211212,211212,211212,211212,211212,211122,211221,221121,221223,
+        211222,211222,211222,211211,211212,211212,211112
+    ];
 
-    // Automatically clean text as user types or pastes
-    vinInput.addEventListener('input', (e) => {
-        // Force uppercase and strip illegal characters (Spaces, symbols, and standard forbidden letters I, O, Q)
-        let cleaned = e.target.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
-        e.target.value = cleaned;
+    document.getElementById('vin').addEventListener('input', (e) => {
+        e.target.value = e.target.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
     });
 
-    generateBtn.addEventListener('click', () => {
-        const val = vinInput.value.trim();
+    function makeBarcode() {
+        const vin = document.getElementById('vin').value.trim();
+        const err = document.getElementById('err');
+        const out = document.getElementById('out');
+        const svg = document.getElementById('bcode');
         
-        if (val.length !== 17) {
-            errorText.style.display = 'block';
-            resultSection.style.display = 'none';
+        if (vin.length !== 17) {
+            err.style.display = 'block';
+            out.style.display = 'none';
             return;
         }
         
-        errorText.style.display = 'none';
-        vinDisplay.innerText = val;
-        resultSection.style.display = 'block';
-        
-        // Generate high-density Code 128 format optimized for Midtronics laser lenses
-        JsBarcode("#barcode", val, {
-            format: "CODE128",
-            width: 2.8, 
-            height: 95,
-            displayValue: true,
-            fontSize: 16,
-            background: "#ffffff",
-            lineColor: "#000000",
-            margin: 10
+        err.style.display = 'none';
+        document.getElementById('vtxt').innerText = vin;
+        out.style.display = 'block';
+        svg.innerHTML = '';
+
+        // Calculate Code 128 (Type B) Checksum natively
+        let checksum = 104; 
+        for (let i = 0; i < vin.length; i++) {
+            checksum += (vin.charCodeAt(i) - 32) * (i + 1);
+        }
+        const checkDigit = checksum % 103;
+
+        // Build pattern array
+        let pattern = [104]; // Start B
+        for (let i = 0; i < vin.length; i++) pattern.push(vin.charCodeAt(i) - 32);
+        pattern.push(checkDigit);
+        pattern.push(106); // Stop pattern
+
+        // Convert configuration numbers into actual high-contrast vector drawing commands
+        let modules = "";
+        pattern.forEach(val => {
+            let sequence = C128[val].toString();
+            for (let i = 0; i < sequence.length; i++) {
+                let count = parseInt(sequence[i]);
+                modules += (i % 2 === 0 ? "1" : "0").repeat(count);
+            }
         });
-    });
+        modules += "11"; // Terminal bar
+
+        // Generate the SVG nodes safely
+        const moduleWidth = 2; 
+        svg.setAttribute("width", modules.length * moduleWidth);
+        
+        for (let i = 0; i < modules.length; i++) {
+            if (modules[i] === "1") {
+                let rect = document.createElementNS("http://w3.org", "rect");
+                rect.setAttribute("x", i * moduleWidth);
+                rect.setAttribute("y", 0);
+                rect.setAttribute("width", moduleWidth);
+                rect.setAttribute("height", 100);
+                rect.setAttribute("fill", "#000000");
+                svg.appendChild(rect);
+            }
+        }
+    }
 </script>
 
 </body>
