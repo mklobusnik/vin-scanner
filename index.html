@@ -262,7 +262,7 @@ async function captureAndOCR() {
       setStatus('Could not read VIN clearly — type it in below', 'err');
     }
     showVINStep(cleanedVin);
-    setStatus('raw'+raw);
+    setStatus('cleanedVin: '+cleanedVin);
   } catch (e) {
     setStatus('OCR failed: ' + e.message, 'err');
     showVINStep('');
