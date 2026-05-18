@@ -197,7 +197,7 @@ let stream = null, scanning = false;
 
 function setStatus(msg, type = '', spinner = false) {
   statusBar.className = 'status-bar' + (type ? ' ' + type : '');
-  statusBar.innerHTML += (spinner ? '<div class="spinner"></div>' : '') + `<span>${msg}</span>`;
+  statusBar.innerHTML = (spinner ? '<div class="spinner"></div>' : '') + `<span>${msg}</span>`;
 }
 
 startBtn.addEventListener('click', async () => {
@@ -221,7 +221,7 @@ startBtn.addEventListener('click', async () => {
 
 function findVIN(inputString) {
     // Matches "VIN: " followed by exactly 17 alphanumeric characters (excluding I, O, Q)
-    setStatus('inputString: '+inputString);
+    //setStatus('inputString: '+inputString);
     const vinRegex = /VIN:\s*([A-Z0-9]{17})/i;
     
     const match = inputString.match(vinRegex);
@@ -263,7 +263,7 @@ async function captureAndOCR() {
       setStatus('Could not read VIN clearly — type it in below', 'err');
     }
     showVINStep(cleanedVin);
-    setStatus('cleanedVin: '+cleanedVin);
+    //setStatus('cleanedVin: '+cleanedVin);
   } catch (e) {
     setStatus('OCR failed: ' + e.message, 'err');
     showVINStep('');
