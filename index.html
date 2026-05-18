@@ -249,14 +249,14 @@ async function captureAndOCR() {
     // Strip chars that OCR mis-reads: O→0, I→1, Q→0, keep only VIN-valid chars
     const cleanedVin = rawVin.replace(/O/g,'0').replace(/I/g,'1').replace(/Q/g,'0')
       .replace(/[^A-HJ-NPR-Z0-9\s]/g,' ');
-    const cleaned = raw.replace(/O/g,'0').replace(/I/g,'1').replace(/Q/g,'0')
+    //const cleaned = raw.replace(/O/g,'0').replace(/I/g,'1').replace(/Q/g,'0')
       .replace(/[^A-HJ-NPR-Z0-9\s]/g,' ');
     // Pick the token closest to 17 chars
-    const tokens = cleaned.split(/\s+/).filter(t => t.length >= 10);
+    //const tokens = cleaned.split(/\s+/).filter(t => t.length >= 10);
     
-    tokens.sort((a, b) => Math.abs(b.length - 17) - Math.abs(a.length - 17));
-    const best = (tokens[0] || '').slice(0, 17);
-    if (best.length >= 10) {
+    //tokens.sort((a, b) => Math.abs(b.length - 17) - Math.abs(a.length - 17));
+   // const best = (tokens[0] || '').slice(0, 17);
+    if (cleanedVin.length >= 10) {
       setStatus('VIN detected — please verify below', 'ok');
     } else {
       setStatus('Could not read VIN clearly — type it in below', 'err');
