@@ -3,63 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VIN Barcode Generator</title>
+    <title>VIN to Barcode Converter</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background-color: #f1f5f9; text-align: center; color: #1e293b; }
-        .card { max-width: 420px; margin: 20px auto; background: #ffffff; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); box-sizing: border-box; }
-        h1 { font-size: 20px; margin: 0 0 4px 0; color: #0f172a; }
-        p { font-size: 13px; color: #64748b; margin: 0 0 20px 0; }
-        label { display: block; text-align: left; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #475569; }
-        input { width: 100%; padding: 14px; font-size: 18px; border: 2px solid #cbd5e1; border-radius: 10px; box-sizing: border-box; text-transform: uppercase; letter-spacing: 1px; font-family: monospace; outline: none; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; background-color: #f1f5f9; text-align: center; color: #1e293b; }
+        .card { max-width: 400px; margin: 10px auto; background: #ffffff; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); box-sizing: border-box; }
+        h1 { font-size: 18px; margin: 0 0 15px 0; color: #0f172a; }
+        .step { background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: left; border: 1px solid #e2e8f0; }
+        .step-title { font-weight: bold; font-size: 13px; color: #2563eb; margin-bottom: 4px; text-transform: uppercase; }
+        label { font-size: 14px; color: #475569; display: block; }
+        input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; text-transform: uppercase; font-family: monospace; outline: none; }
         input:focus { border-color: #2563eb; }
-        button { background-color: #2563eb; color: white; border: none; padding: 16px; font-size: 16px; font-weight: 600; border-radius: 10px; cursor: pointer; width: 100%; margin-top: 15px; }
+        input[type="file"] { margin-top: 5px; font-size: 14px; width: 100%; }
+        button { background-color: #2563eb; color: white; border: none; padding: 14px; font-size: 15px; font-weight: 600; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 5px; }
         button:active { background-color: #1d4ed8; }
-        .error { color: #dc2626; font-size: 13px; margin-top: 6px; display: none; text-align: left; font-weight: 500; }
-        .output { margin-top: 25px; padding-top: 20px; border-top: 2px dashed #e2e8f0; display: none; }
-        .vin-text { font-size: 18px; font-weight: bold; letter-spacing: 2px; margin-bottom: 12px; font-family: monospace; }
-        .barcode-box { background: white; padding: 12px; display: block; overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
-        svg { display: block; margin: 0 auto; min-width: 320px; height: 100px; }
+        .error { color: #dc2626; font-size: 12px; margin-top: 5px; display: none; font-weight: 500; }
+        .output { margin-top: 20px; padding-top: 15px; border-top: 2px dashed #e2e8f0; display: none; }
+        .vin-text { font-size: 16px; font-weight: bold; letter-spacing: 2px; margin-bottom: 10px; font-family: monospace; }
+        .barcode-box { background: white; padding: 15px; display: block; border: 1px solid #e2e8f0; border-radius: 8px; }
+        svg { display: block; margin: 0 auto; width: 100%; height: auto; max-height: 100px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h1>VIN to Barcode</h1>
-    <p>Optimized for Midtronics Testers</p>
+    <h1>VIN Barcode Station</h1>
     
-    <label for="vin">Enter or Paste 17-Digit VIN:</label>
-    <!-- Tap this box on an iPhone and choose "Scan Text" to use your built-in Apple camera to auto-read paper! -->
-    <input type="text" id="vin" placeholder="ENTER 17 CHARACTERS" maxlength="17" autocomplete="off" autocapitalize="characters">
-    <div class="error" id="err">VIN must be exactly 17 valid characters.</div>
+    <!-- Step 1: Upload a Photo -->
+    <div class="step">
+        <div class="step-title">Option A: Upload Photo of VIN</div>
+        <label>Take a photo of the printed paper VIN code, or select it from your library:</label>
+        <input type="file" id="photo-input" accept="image/*">
+    </div>
+
+    <!-- Step 2: Manual backup if needed -->
+    <div class="step">
+        <div class="step-title">Option B: Type VIN Manually</div>
+        <input type="text" id="vin" placeholder="ENTER 17 CHARACTERS" maxlength="17" autocomplete="off" autocapitalize="characters">
+        <div class="error" id="err">Must be exactly 17 alphanumeric characters.</div>
+    </div>
     
-    <button onclick="makeBarcode()">Generate Barcode</button>
+    <button onclick="makeBarcode()">Create Tester Barcode</button>
     
     <div class="output" id="out">
         <div class="vin-text" id="vtxt"></div>
         <div class="barcode-box">
-            <svg id="bcode" xmlns="http://w3.org"></svg>
+            <svg id="bcode" xmlns="http://w3.org" viewBox="0 0 450 100" preserveAspectRatio="none"></svg>
         </div>
     </div>
 </div>
 
+<!-- Fast, basic online OCR text engine fallback -->
+<script src="https://jsdelivr.net"></script>
 <script>
-    // Pure Javascript Native Code-128 Generator (No external file dependencies)
-    const C128 = [
-        212222,222122,222221,121223,121322,131222,122213,122312,132212,221213,
-        221312,231212,112232,122132,122231,113222,123122,123221,223211,221132,
-        221231,213212,223112,312131,311222,312212,312221,311123,311321,313121,
-        211322,213122,213221,111332,113132,113331,112313,113213,122313,112331,
-        113231,131132,131231,132211,212312,231122,231221,112214,112412,133112,
-        142112,114122,114221,112241,112421,124112,124221,141122,141221,112211,
-        211142,214112,221114,211213,211312,211412,233111,211241,211421,221123,
-        221321,221712,221111,221211,211212,211212,211212,211212,211212,211212,
-        121211,121211,121211,121211,121211,121211,121211,121211,121211,121211,
-        211212,211212,211212,211212,211212,211212,211122,211221,221121,221223,
-        211222,211222,211222,211211,211212,211212,211112
-    ];
+    const C128_TABLE = ["212222","222122","222221","121223","121322","131222","122213","122312","132212","221213","221312","231212","112232","122132","122231","113222","123122","123221","223211","221132","221231","213212","223112","312131","311222","312212","331122","311322","312312","332112","314111","221411","431111","111224","111422","121124","121421","141122","141221","112214","112412","122114","122411","142112","142211","241211","221114","213113","214112","211213","211312","211411","211141","211123","211321","211412","211241","211421","224111","221141","221113","224112","211222","111233","111332","121133","121331","131132","131331","112313","113213","132311","211313","231113","231311","112133","112331","132131","113123","113321","133121","313121","211331","231131","213113","213311","213131","311123","311321","311412","311241","311421","312113","312311","331113","331311","112115","112314","112151","112413","115121","115311","121151","121413","125112","125211","211116"];
 
     document.getElementById('vin').addEventListener('input', (e) => {
         e.target.value = e.target.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
+    });
+
+    // Handle photo file selection or direct snapshot
+    document.getElementById('photo-input').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const vinField = document.getElementById('vin');
+        vinField.value = "READING IMAGE...";
+
+        try {
+            const worker = await Tesseract.createWorker('eng');
+            const { data: { text } } = await worker.recognize(file);
+            await worker.terminate();
+
+            let cleaned = text.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
+            let match = cleaned.match(/[A-HJ-NPR-Z0-9]{17}/);
+
+            if (match) {
+                vinField.value = match[0];
+                makeBarcode();
+            } else {
+                vinField.value = "";
+                alert("Could not extract a clear 17-digit code. Please try typing it or crop closer to the text.");
+            }
+        } catch (err) {
+            vinField.value = "";
+            alert("Processing failed. Please type the VIN code manually.");
+        }
     });
 
     function makeBarcode() {
@@ -68,7 +96,7 @@
         const out = document.getElementById('out');
         const svg = document.getElementById('bcode');
         
-        if (vin.length !== 17) {
+        if (vin.length !== 17 || vin === "READING IMAGE...") {
             err.style.display = 'block';
             out.style.display = 'none';
             return;
@@ -79,41 +107,33 @@
         out.style.display = 'block';
         svg.innerHTML = '';
 
-        // Calculate Code 128 (Type B) Checksum natively
-        let checksum = 104; 
+        let checksum = 104;
         for (let i = 0; i < vin.length; i++) {
             checksum += (vin.charCodeAt(i) - 32) * (i + 1);
         }
         const checkDigit = checksum % 103;
 
-        // Build pattern array
-        let pattern = [104]; // Start B
-        for (let i = 0; i < vin.length; i++) pattern.push(vin.charCodeAt(i) - 32);
-        pattern.push(checkDigit);
-        pattern.push(106); // Stop pattern
+        let patternIds = [];
+        for (let i = 0; i < vin.length; i++) patternIds.push(vin.charCodeAt(i) - 32);
+        patternIds.push(checkDigit, 106);
 
-        // Convert configuration numbers into actual high-contrast vector drawing commands
-        let modules = "";
-        pattern.forEach(val => {
-            let sequence = C128[val].toString();
+        let bitString = "";
+        patternIds.forEach(id => {
+            let sequence = C128_TABLE[id];
             for (let i = 0; i < sequence.length; i++) {
-                let count = parseInt(sequence[i]);
-                modules += (i % 2 === 0 ? "1" : "0").repeat(count);
+                bitString += (i % 2 === 0 ? "1" : "0").repeat(parseInt(sequence[i]));
             }
         });
-        modules += "11"; // Terminal bar
+        bitString += "11";
 
-        // Generate the SVG nodes safely
-        const moduleWidth = 2; 
-        svg.setAttribute("width", modules.length * moduleWidth);
+        const totalModules = bitString.length;
+        svg.setAttribute("viewBox", `0 0 ${totalModules} 100`);
         
-        for (let i = 0; i < modules.length; i++) {
-            if (modules[i] === "1") {
+        for (let i = 0; i < totalModules; i++) {
+            if (bitString[i] === "1") {
                 let rect = document.createElementNS("http://w3.org", "rect");
-                rect.setAttribute("x", i * moduleWidth);
-                rect.setAttribute("y", 0);
-                rect.setAttribute("width", moduleWidth);
-                rect.setAttribute("height", 100);
+                rect.setAttribute("x", i); rect.setAttribute("y", 0);
+                rect.setAttribute("width", 1); rect.setAttribute("height", 100);
                 rect.setAttribute("fill", "#000000");
                 svg.appendChild(rect);
             }
