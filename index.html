@@ -1,145 +1,325 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VIN to Barcode Converter</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; background-color: #f1f5f9; text-align: center; color: #1e293b; }
-        .card { max-width: 400px; margin: 10px auto; background: #ffffff; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); box-sizing: border-box; }
-        h1 { font-size: 18px; margin: 0 0 15px 0; color: #0f172a; }
-        .step { background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: left; border: 1px solid #e2e8f0; }
-        .step-title { font-weight: bold; font-size: 13px; color: #2563eb; margin-bottom: 4px; text-transform: uppercase; }
-        label { font-size: 14px; color: #475569; display: block; }
-        input[type="text"] { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; text-transform: uppercase; font-family: monospace; outline: none; }
-        input:focus { border-color: #2563eb; }
-        input[type="file"] { margin-top: 5px; font-size: 14px; width: 100%; }
-        button { background-color: #2563eb; color: white; border: none; padding: 14px; font-size: 15px; font-weight: 600; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 5px; }
-        button:active { background-color: #1d4ed8; }
-        .error { color: #dc2626; font-size: 12px; margin-top: 5px; display: none; font-weight: 500; }
-        .output { margin-top: 20px; padding-top: 15px; border-top: 2px dashed #e2e8f0; display: none; }
-        .vin-text { font-size: 16px; font-weight: bold; letter-spacing: 2px; margin-bottom: 10px; font-family: monospace; }
-        .barcode-box { background: white; padding: 15px; display: block; border: 1px solid #e2e8f0; border-radius: 8px; }
-        svg { display: block; margin: 0 auto; width: 100%; height: auto; max-height: 100px; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>VIN Scanner → Barcode</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;600;800&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d0f; --surface: #16181c; --border: #2a2d35;
+      --accent: #f0c040; --accent2: #ff6b35; --text: #e8eaf0;
+      --muted: #6b7180; --success: #4caf82;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Barlow Condensed', sans-serif; }
+    body { display: flex; flex-direction: column; align-items: center; min-height: 100dvh; padding-bottom: 40px; }
+
+    header { width: 100%; background: var(--surface); border-bottom: 2px solid var(--accent); padding: 16px 20px 12px; display: flex; align-items: baseline; gap: 12px; }
+    .logo { font-size: 1.6rem; font-weight: 800; letter-spacing: 0.04em; color: var(--accent); text-transform: uppercase; }
+    .sub { font-size: 0.8rem; font-weight: 300; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+
+    main { width: 100%; max-width: 540px; padding: 24px 18px 0; display: flex; flex-direction: column; gap: 20px; }
+    .label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; }
+
+    .camera-box { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 8px; overflow: hidden; border: 1.5px solid var(--border); }
+    #video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+    .scan-frame { width: 80%; height: 40%; border: 2px solid var(--accent); border-radius: 4px; position: relative; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45); }
+    .scan-line { position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); animation: scanMove 2s ease-in-out infinite; top: 0; }
+    @keyframes scanMove { 0%,100% { top: 0; } 50% { top: calc(100% - 2px); } }
+    .cam-hint { position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.6); }
+
+    .btn-primary { width: 100%; background: var(--accent); color: #0d0d0f; border: none; border-radius: 6px; font-family: 'Barlow Condensed', sans-serif; font-size: 1.05rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; padding: 15px; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+    .btn-primary:hover { background: #f7d060; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+
+    .btn-secondary { flex: 1; background: var(--surface); color: var(--text); border: 1.5px solid var(--border); border-radius: 6px; font-family: 'Barlow Condensed', sans-serif; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; padding: 13px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    .status-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; font-size: 0.82rem; letter-spacing: 0.06em; color: var(--muted); display: flex; align-items: center; gap: 10px; min-height: 48px; }
+    .status-bar.thinking { color: var(--accent); border-color: rgba(240,192,64,0.3); }
+    .status-bar.ok { color: var(--success); border-color: rgba(76,175,130,0.3); }
+    .status-bar.err { color: var(--accent2); border-color: rgba(255,107,53,0.3); }
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(240,192,64,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .vin-edit-row { display: flex; gap: 10px; }
+    .vin-field { flex: 1; background: var(--surface); border: 1.5px solid var(--border); border-radius: 6px; color: var(--text); font-family: 'Share Tech Mono', monospace; font-size: 1.2rem; letter-spacing: 0.1em; padding: 12px 14px; text-transform: uppercase; outline: none; transition: border-color 0.2s; caret-color: var(--accent); }
+    .vin-field:focus { border-color: var(--accent); }
+    .vin-field.valid { border-color: var(--success); }
+    .vin-field.error { border-color: var(--accent2); }
+
+    .barcode-section { display: none; flex-direction: column; gap: 14px; }
+    .barcode-section.visible { display: flex; }
+    .divider { height: 1px; background: var(--border); }
+
+    .barcode-card { background: #fff; border-radius: 8px; padding: 20px 14px 14px; display: flex; flex-direction: column; align-items: center; gap: 10px; box-shadow: 0 4px 28px rgba(0,0,0,0.5); }
+    #barcode-canvas { width: 100%; height: auto; display: block; }
+    .vin-text-below { font-family: 'Share Tech Mono', monospace; font-size: 1rem; letter-spacing: 0.2em; color: #111; text-align: center; font-weight: 700; }
+
+    .info-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 5px 10px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+    .chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+    .rescan-row { display: flex; gap: 10px; }
+
+    .tip { background: rgba(240,192,64,0.07); border-left: 3px solid var(--accent); border-radius: 0 4px 4px 0; padding: 10px 14px; font-size: 0.78rem; font-weight: 300; letter-spacing: 0.04em; color: var(--muted); line-height: 1.5; }
+    .tip strong { color: var(--accent); font-weight: 600; }
+    .lock-hint { font-size: 0.68rem; font-weight: 300; letter-spacing: 0.1em; color: var(--muted); text-align: center; text-transform: uppercase; }
+
+    #capture-canvas { display: none; }
+  </style>
 </head>
 <body>
 
-<div class="card">
-    <h1>VIN Barcode Station</h1>
-    
-    <!-- Step 1: Upload a Photo -->
-    <div class="step">
-        <div class="step-title">Option A: Upload Photo of VIN</div>
-        <label>Take a photo of the printed paper VIN code, or select it from your library:</label>
-        <input type="file" id="photo-input" accept="image/*">
-    </div>
+<header>
+  <span class="logo">VIN→BAR</span>
+  <span class="sub">Camera · OCR · Code 39</span>
+</header>
 
-    <!-- Step 2: Manual backup if needed -->
-    <div class="step">
-        <div class="step-title">Option B: Type VIN Manually</div>
-        <input type="text" id="vin" placeholder="ENTER 17 CHARACTERS" maxlength="17" autocomplete="off" autocapitalize="characters">
-        <div class="error" id="err">Must be exactly 17 alphanumeric characters.</div>
+<main>
+  <div id="step-camera">
+    <div class="label">Step 1 — Point camera at the printed VIN</div>
+    <div class="camera-box">
+      <video id="video" autoplay playsinline muted></video>
+      <div class="scan-overlay"><div class="scan-frame"><div class="scan-line"></div></div></div>
+      <div class="cam-hint" id="camHint">Tap "Start Camera" below</div>
     </div>
-    
-    <button onclick="makeBarcode()">Create Tester Barcode</button>
-    
-    <div class="output" id="out">
-        <div class="vin-text" id="vtxt"></div>
-        <div class="barcode-box">
-            <svg id="bcode" xmlns="http://w3.org" viewBox="0 0 450 100" preserveAspectRatio="none"></svg>
-        </div>
-    </div>
-</div>
+    <canvas id="capture-canvas"></canvas>
+  </div>
 
-<!-- Fast, basic online OCR text engine fallback -->
-<script src="https://jsdelivr.net"></script>
+  <button class="btn-primary" id="startBtn">▶ Start Camera</button>
+
+  <div class="status-bar" id="statusBar">
+    <span id="statusText">Camera not started</span>
+  </div>
+
+  <div id="step-vin" style="display:none;">
+    <div class="label">Step 2 — Verify VIN (tap to correct)</div>
+    <div class="vin-edit-row">
+      <input class="vin-field" id="vinField" type="text" maxlength="17"
+        autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text" placeholder="VIN will appear here" />
+    </div>
+    <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:0.7rem;color:var(--muted);font-family:'Share Tech Mono',monospace;letter-spacing:0.06em;"><span id="vinCount">0</span>/17</span>
+      <span id="vinValidMsg" style="font-size:0.7rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;"></span>
+    </div>
+  </div>
+
+  <button class="btn-primary" id="genBtn" style="display:none;" disabled>Generate Barcode</button>
+
+  <div class="barcode-section" id="barcodeSection">
+    <div class="divider"></div>
+    <div class="label">Scan this with your Midtronics tester</div>
+    <div class="barcode-card">
+      <canvas id="barcode-canvas"></canvas>
+      <div class="vin-text-below" id="vinDisplay"></div>
+    </div>
+    <div class="info-chips">
+      <div class="chip"><span class="dot"></span>Code 39</div>
+      <div class="chip"><span class="dot"></span>17-char VIN</div>
+      <div class="chip"><span class="dot"></span><span id="barcodeWidthChip">—</span></div>
+    </div>
+    <div class="rescan-row">
+      <button class="btn-secondary" id="rescanBtn">↺ Scan Again</button>
+      <button class="btn-secondary" id="saveBtn">⬇ Save PNG</button>
+    </div>
+    <div class="tip">
+      <strong>Tip:</strong> Set screen to maximum brightness. Hold phone flat, 5–15 cm from the Midtronics scanner window. Lock screen rotation before presenting the barcode.
+    </div>
+    <div class="lock-hint">🔒 Lock screen rotation for best results</div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
-    const C128_TABLE = ["212222","222122","222221","121223","121322","131222","122213","122312","132212","221213","221312","231212","112232","122132","122231","113222","123122","123221","223211","221132","221231","213212","223112","312131","311222","312212","331122","311322","312312","332112","314111","221411","431111","111224","111422","121124","121421","141122","141221","112214","112412","122114","122411","142112","142211","241211","221114","213113","214112","211213","211312","211411","211141","211123","211321","211412","211241","211421","224111","221141","221113","224112","211222","111233","111332","121133","121331","131132","131331","112313","113213","132311","211313","231113","231311","112133","112331","132131","113123","113321","133121","313121","211331","231131","213113","213311","213131","311123","311321","311412","311241","311421","312113","312311","331113","331311","112115","112314","112151","112413","115121","115311","121151","121413","125112","125211","211116"];
+const C39 = {
+  '0':'101001101101','1':'110100101011','2':'101100101011','3':'110110010101',
+  '4':'101001101011','5':'110100110101','6':'101100110101','7':'101001011011',
+  '8':'110100101101','9':'101100101101','A':'110101001011','B':'101101001011',
+  'C':'110110100101','D':'101011001011','E':'110101100101','F':'101101100101',
+  'G':'101010011011','H':'110101001101','I':'101101001101','J':'101011001101',
+  'K':'110101010011','L':'101101010011','M':'110110101001','N':'101011010011',
+  'O':'110101101001','P':'101101101001','Q':'101010110011','R':'110101011001',
+  'S':'101101011001','T':'101011011001','U':'110010101011','V':'100110101011',
+  'W':'110011010101','X':'100101101011','Y':'110010110101','Z':'100110110101',
+  '-':'100101011011','.':'110010101101',' ':'100110101101','$':'100100100101',
+  '/':'100100101001','+':'100101001001','%':'101001001001','*':'100101101101'
+};
 
-    document.getElementById('vin').addEventListener('input', (e) => {
-        e.target.value = e.target.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
+function drawBarcode(canvas, text) {
+  const full = '*' + text.toUpperCase() + '*';
+  let bits = '';
+  for (let i = 0; i < full.length; i++) {
+    if (!C39[full[i]]) throw new Error('Invalid char: ' + full[i]);
+    if (i > 0) bits += '0';
+    bits += C39[full[i]];
+  }
+  const mw = 3, cw = bits.length * mw + 40, ch = 140, barH = 90, topPad = 16;
+  canvas.width = cw; canvas.height = ch;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cw, ch);
+  let x = 20;
+  for (const b of bits) {
+    if (b === '1') { ctx.fillStyle = '#000'; ctx.fillRect(x, topPad, mw, barH); }
+    x += mw;
+  }
+  document.getElementById('barcodeWidthChip').textContent = cw + ' px wide';
+}
+
+const VIN_RE = /^[A-HJ-NPR-Z0-9]{17}$/;
+function validateVIN(v) {
+  if (!v.length) return { ok: null, msg: '' };
+  if (!/^[A-HJ-NPR-Z0-9]*$/.test(v)) return { ok: false, msg: '✕ Invalid chars' };
+  if (v.length < 17) return { ok: false, msg: `Need ${17 - v.length} more` };
+  return { ok: true, msg: '✓ Valid' };
+}
+
+const video = document.getElementById('video');
+const captureCanvas = document.getElementById('capture-canvas');
+const startBtn = document.getElementById('startBtn');
+const statusBar = document.getElementById('statusBar');
+const stepVin = document.getElementById('step-vin');
+const vinField = document.getElementById('vinField');
+const vinCount = document.getElementById('vinCount');
+const vinValidMsg = document.getElementById('vinValidMsg');
+const genBtn = document.getElementById('genBtn');
+const barcodeSection = document.getElementById('barcodeSection');
+const barcodeCanvas = document.getElementById('barcode-canvas');
+const vinDisplay = document.getElementById('vinDisplay');
+const rescanBtn = document.getElementById('rescanBtn');
+const saveBtn = document.getElementById('saveBtn');
+const camHint = document.getElementById('camHint');
+
+let stream = null, scanning = false;
+
+function setStatus(msg, type = '', spinner = false) {
+  statusBar.className = 'status-bar' + (type ? ' ' + type : '');
+  statusBar.innerHTML = (spinner ? '<div class="spinner"></div>' : '') + `<span>${msg}</span>`;
+}
+
+startBtn.addEventListener('click', async () => {
+  if (stream) { captureAndOCR(); return; }
+  try {
+    setStatus('Requesting camera access…', 'thinking', true);
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
     });
+    video.srcObject = stream;
+    await video.play();
+    startBtn.textContent = '📷 Capture & Read VIN';
+    camHint.textContent = 'Align VIN text inside the frame, then capture';
+    setStatus('Camera ready — frame the VIN text and tap Capture', 'ok');
+  } catch (e) {
+    setStatus('Camera access denied — type VIN manually below', 'err');
+    showVINStep('');
+  }
+});
 
-    // Handle photo file selection or direct snapshot
-    document.getElementById('photo-input').addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const vinField = document.getElementById('vin');
-        vinField.value = "READING IMAGE...";
-
-        try {
-            const worker = await Tesseract.createWorker('eng');
-            const { data: { text } } = await worker.recognize(file);
-            await worker.terminate();
-
-            let cleaned = text.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
-            let match = cleaned.match(/[A-HJ-NPR-Z0-9]{17}/);
-
-            if (match) {
-                vinField.value = match[0];
-                makeBarcode();
-            } else {
-                vinField.value = "";
-                alert("Could not extract a clear 17-digit code. Please try typing it or crop closer to the text.");
-            }
-        } catch (err) {
-            vinField.value = "";
-            alert("Processing failed. Please type the VIN code manually.");
-        }
+async function captureAndOCR() {
+  if (scanning) return;
+  scanning = true;
+  startBtn.disabled = true;
+  const vw = video.videoWidth || 640, vh = video.videoHeight || 480;
+  captureCanvas.width = vw; captureCanvas.height = vh;
+  captureCanvas.getContext('2d').drawImage(video, 0, 0, vw, vh);
+  setStatus('Analysing image…', 'thinking', true);
+  try {
+    const result = await Tesseract.recognize(captureCanvas, 'eng', {
+      logger: m => {
+        if (m.status === 'recognizing text')
+          setStatus(`Reading text… ${Math.round(m.progress * 100)}%`, 'thinking', true);
+      }
     });
-
-    function makeBarcode() {
-        const vin = document.getElementById('vin').value.trim();
-        const err = document.getElementById('err');
-        const out = document.getElementById('out');
-        const svg = document.getElementById('bcode');
-        
-        if (vin.length !== 17 || vin === "READING IMAGE...") {
-            err.style.display = 'block';
-            out.style.display = 'none';
-            return;
-        }
-        
-        err.style.display = 'none';
-        document.getElementById('vtxt').innerText = vin;
-        out.style.display = 'block';
-        svg.innerHTML = '';
-
-        let checksum = 104;
-        for (let i = 0; i < vin.length; i++) {
-            checksum += (vin.charCodeAt(i) - 32) * (i + 1);
-        }
-        const checkDigit = checksum % 103;
-
-        let patternIds = [];
-        for (let i = 0; i < vin.length; i++) patternIds.push(vin.charCodeAt(i) - 32);
-        patternIds.push(checkDigit, 106);
-
-        let bitString = "";
-        patternIds.forEach(id => {
-            let sequence = C128_TABLE[id];
-            for (let i = 0; i < sequence.length; i++) {
-                bitString += (i % 2 === 0 ? "1" : "0").repeat(parseInt(sequence[i]));
-            }
-        });
-        bitString += "11";
-
-        const totalModules = bitString.length;
-        svg.setAttribute("viewBox", `0 0 ${totalModules} 100`);
-        
-        for (let i = 0; i < totalModules; i++) {
-            if (bitString[i] === "1") {
-                let rect = document.createElementNS("http://w3.org", "rect");
-                rect.setAttribute("x", i); rect.setAttribute("y", 0);
-                rect.setAttribute("width", 1); rect.setAttribute("height", 100);
-                rect.setAttribute("fill", "#000000");
-                svg.appendChild(rect);
-            }
-        }
+    const raw = result.data.text.toUpperCase();
+    // Strip chars that OCR mis-reads: O→0, I→1, Q→0, keep only VIN-valid chars
+    const cleaned = raw.replace(/O/g,'0').replace(/I/g,'1').replace(/Q/g,'0')
+      .replace(/[^A-HJ-NPR-Z0-9\s]/g,' ');
+    // Pick the token closest to 17 chars
+    const tokens = cleaned.split(/\s+/).filter(t => t.length >= 10);
+    tokens.sort((a, b) => Math.abs(b.length - 17) - Math.abs(a.length - 17));
+    const best = (tokens[0] || '').slice(0, 17);
+    if (best.length >= 10) {
+      setStatus('VIN detected — please verify below', 'ok');
+    } else {
+      setStatus('Could not read VIN clearly — type it in below', 'err');
     }
-</script>
+    showVINStep(best);
+  } catch (e) {
+    setStatus('OCR failed: ' + e.message, 'err');
+    showVINStep('');
+  }
+  scanning = false;
+  startBtn.disabled = false;
+}
 
+function showVINStep(vin) {
+  vinField.value = vin;
+  vinField.dispatchEvent(new Event('input'));
+  stepVin.style.display = 'block';
+  genBtn.style.display = 'block';
+  setTimeout(() => stepVin.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+}
+
+vinField.addEventListener('input', () => {
+  const val = vinField.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  vinField.value = val;
+  vinCount.textContent = val.length;
+  const { ok, msg } = validateVIN(val);
+  vinValidMsg.textContent = msg;
+  vinValidMsg.style.color = ok === true ? 'var(--success)' : ok === false ? 'var(--accent2)' : 'var(--muted)';
+  vinField.className = 'vin-field' + (ok === true ? ' valid' : ok === false ? ' error' : '');
+  genBtn.disabled = ok !== true;
+});
+
+genBtn.addEventListener('click', () => {
+  const vin = vinField.value.trim().toUpperCase();
+  try {
+    drawBarcode(barcodeCanvas, vin);
+    vinDisplay.textContent = vin;
+    barcodeSection.classList.add('visible');
+    setTimeout(() => barcodeSection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    // Stop camera to save battery once barcode is shown
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  } catch (e) {
+    setStatus('Barcode error: ' + e.message, 'err');
+  }
+});
+
+rescanBtn.addEventListener('click', () => {
+  barcodeSection.classList.remove('visible');
+  stepVin.style.display = 'none';
+  genBtn.style.display = 'none';
+  vinField.value = ''; vinField.className = 'vin-field';
+  vinCount.textContent = '0'; vinValidMsg.textContent = '';
+  genBtn.disabled = true;
+  stream = null;
+  startBtn.textContent = '▶ Start Camera';
+  camHint.textContent = 'Tap "Start Camera" below';
+  setStatus('Camera not started');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+saveBtn.addEventListener('click', () => {
+  const vin = vinField.value.trim().toUpperCase();
+  const off = document.createElement('canvas');
+  drawBarcode(off, vin);
+  const fin = document.createElement('canvas');
+  fin.width = off.width; fin.height = off.height + 32;
+  const ctx = fin.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, fin.width, fin.height);
+  ctx.drawImage(off, 0, 0);
+  ctx.fillStyle = '#000'; ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(vin, fin.width / 2, off.height + 22);
+  const a = document.createElement('a');
+  a.download = 'VIN_' + vin + '.png';
+  a.href = fin.toDataURL('image/png');
+  a.click();
+});
+</script>
 </body>
 </html>
