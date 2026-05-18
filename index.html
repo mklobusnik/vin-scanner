@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VIN to Barcode Scanner</title>
+    <!-- Force browser to bypass GitHub CDN caching -->
+    <meta http-equiv="cache-control" content="no-cache">
+    <meta http-equiv="expires" content="0">
+    <meta http-equiv="pragma" content="no-cache">
+    <title>VIN Barcode Generator</title>
     <link href="https://googleapis.com" rel="stylesheet">
-    <!-- Updated stable CDN links -->
-    <script src="https://jsdelivr.net"></script>
+    <!-- Only one ultra-reliable library used for drawing the bars -->
     <script src="https://jsdelivr.net"></script>
 
     <style>
@@ -20,13 +23,41 @@
         }
         .container {
             max-width: 450px;
-            margin: 0 auto;
+            margin: 20px auto;
             background: #ffffff;
-            padding: 20px;
+            padding: 24px;
             border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         }
-        h1 { font-size: 18px; margin-bottom: 15px; color: #1e293b; }
+        h1 { font-size: 20px; margin-bottom: 5px; color: #1e293b; }
+        p { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+        
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #475569;
+        }
+        input {
+            width: 100%;
+            padding: 14px;
+            font-size: 18px;
+            border: 2px solid #cbd5e1;
+            border-radius: 10px;
+            box-sizing: border-box;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: monospace;
+        }
+        input:focus {
+            border-color: #2563eb;
+            outline: none;
+        }
         .btn {
             background-color: #2563eb;
             color: white;
@@ -37,54 +68,22 @@
             border-radius: 10px;
             cursor: pointer;
             width: 100%;
-            margin-bottom: 15px;
             box-shadow: 0 2px 4px rgba(37,99,235,0.2);
         }
         .btn:active { background-color: #1d4ed8; }
-        #camera-container {
-            position: relative;
-            width: 100%;
-            border-radius: 10px;
-            overflow: hidden;
-            background: #000;
-            display: none;
-            margin-bottom: 15px;
-        }
-        video {
-            width: 100%;
-            display: block;
-        }
-        .scan-overlay {
-            position: absolute;
-            top: 50%;
-            left: 5%;
-            right: 5%;
-            height: 40px;
-            transform: translateY(-50%);
-            border: 2px dashed #3b82f6;
-            background: rgba(59, 130, 246, 0.1);
-            border-radius: 4px;
-            pointer-events: none;
-        }
-        #status {
-            font-size: 14px;
-            color: #64748b;
-            margin: 10px 0;
-            font-weight: 500;
-            min-height: 20px;
-        }
+        
         .result-box {
-            margin-top: 20px;
+            margin-top: 25px;
             padding-top: 20px;
             border-top: 2px dashed #e2e8f0;
+            display: none;
         }
         #vin-display {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 600;
             letter-spacing: 2px;
             color: #0f172a;
             margin-bottom: 15px;
-            word-break: break-all;
         }
         #barcode-wrapper {
             background: white;
@@ -96,26 +95,35 @@
         #barcode {
             width: 100%;
             height: auto;
-            max-height: 120px;
+            max-height: 130px;
+        }
+        .error-msg {
+            color: #dc2626;
+            font-size: 13px;
+            margin-top: 5px;
+            display: none;
+            font-weight: 500;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>VIN Text-to-Barcode</h1>
+    <h1>VIN to Barcode</h1>
+    <p>For Midtronics Battery Testers</p>
     
-    <button class="btn" id="start-btn">Start VIN Camera</button>
-    
-    <div id="camera-container">
-        <video id="camera-feed" autoplay playsinline></video>
-        <div class="scan-overlay"></div>
+    <div class="input-group">
+        <label for="vin-input">Enter or Scan 17-Digit VIN:</label>
+        <!-- Autofocus triggers mobile keyboards immediately. 
+             If using iPhone, tap the text box and choose "Scan Text" to use Apple's native OCR camera! -->
+        <input type="text" id="vin-input" placeholder="ENTER 17 CHARACTERS" maxlength="17" autocomplete="off" autocapitalize="characters">
+        <div class="error-msg" id="error-text">VIN must be exactly 17 characters.</div>
     </div>
     
-    <div id="status">Ready to initialize.</div>
-
-    <div class="result-box">
-        <div id="vin-display">--- NO VIN SCANNED ---</div>
+    <button class="btn" id="generate-btn">Generate Barcode</button>
+    
+    <div class="result-box" id="result-section">
+        <div id="vin-display">---</div>
         <div id="barcode-wrapper">
             <svg id="barcode"></svg>
         </div>
@@ -123,123 +131,44 @@
 </div>
 
 <script>
-    const startBtn = document.getElementById('start-btn');
-    const cameraContainer = document.getElementById('camera-container');
-    const video = document.getElementById('camera-feed');
-    const statusDiv = document.getElementById('status');
+    const vinInput = document.getElementById('vin-input');
+    const generateBtn = document.getElementById('generate-btn');
+    const resultSection = document.getElementById('result-section');
     const vinDisplay = document.getElementById('vin-display');
-    let stream = null;
-    let isProcessing = false;
-    let worker = null;
+    const errorText = document.getElementById('error-text');
 
-    // Pre-initialize Tesseract worker immediately to avoid screen freezing on click
-    async function initOCR() {
-        statusDiv.innerText = "Loading scan engine...";
-        try {
-            worker = await Tesseract.createWorker('eng');
-            // Explicitly set parameters to improve performance for vehicle plates/text
-            await worker.setParameters({
-                tessedit_char_whitelist: '0123456789ABCDEFGHJKLMNPRSTUVWXYZ',
-            });
-            statusDiv.innerText = "Engine ready. Tap button above.";
-        } catch (e) {
-            statusDiv.innerText = "Error loading scanner. Check internet connection.";
-            console.error(e);
-        }
-    }
-    initOCR();
-
-    startBtn.addEventListener('click', async () => {
-        if (!worker) {
-            await initOCR();
-        }
-        if (stream) { stopCamera(); return; }
-        
-        try {
-            statusDiv.innerText = "Accessing camera...";
-            stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    facingMode: "environment", 
-                    width: { ideal: 1280 }, 
-                    height: { ideal: 720 } 
-                } 
-            });
-            cameraContainer.style.display = "block";
-            video.srcObject = stream;
-            startBtn.innerText = "Stop Camera";
-            statusDiv.innerText = "Align text VIN inside the blue box.";
-            
-            isProcessing = true;
-            setTimeout(captureFrameLoop, 800);
-        } catch (err) {
-            alert("Camera access denied. Make sure you accept permission prompts.");
-            statusDiv.innerText = "Camera error.";
-        }
+    // Automatically clean text as user types or pastes
+    vinInput.addEventListener('input', (e) => {
+        // Force uppercase and strip illegal characters (Spaces, symbols, and standard forbidden letters I, O, Q)
+        let cleaned = e.target.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
+        e.target.value = cleaned;
     });
 
-    function stopCamera() {
-        isProcessing = false;
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
-        stream = null;
-        cameraContainer.style.display = "none";
-        startBtn.innerText = "Start VIN Camera";
-        statusDiv.innerText = "Camera stopped.";
-    }
-
-    async function captureFrameLoop() {
-        if (!isProcessing || !worker) return;
-
-        const canvas = document.createElement('canvas');
-        // Crop area calculation to match the visual scanner box layout
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+    generateBtn.addEventListener('click', () => {
+        const val = vinInput.value.trim();
         
-        if (canvas.width > 0 && canvas.height > 0) {
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            statusDiv.innerText = "Reading paper text...";
-            
-            try {
-                const { data: { text } } = await worker.recognize(canvas);
-                let cleanedText = text.replace(/[^A-Z0-9]/g, '');
-                
-                // Matches standard 17-digit layout (excluding letters I, O, Q)
-                let vinMatch = cleanedText.match(/[A-HJ-NPR-Z0-9]{17}/);
-                
-                if (vinMatch) {
-                    processSuccessfulVIN(vinMatch[0]);
-                } else {
-                    // Repeat loop frame if 17 sequential alphanumeric digits fail validation
-                    if (isProcessing) setTimeout(captureFrameLoop, 600);
-                }
-            } catch (err) {
-                if (isProcessing) setTimeout(captureFrameLoop, 600);
-            }
-        } else {
-            if (isProcessing) setTimeout(captureFrameLoop, 400);
+        if (val.length !== 17) {
+            errorText.style.display = 'block';
+            resultSection.style.display = 'none';
+            return;
         }
-    }
-
-    function processSuccessfulVIN(vin) {
-        stopCamera();
-        statusDiv.innerText = "Success! Code Generated.";
-        vinDisplay.innerText = vin;
         
-        // Render large clean target for the Midtronics handheld scanner
-        JsBarcode("#barcode", vin, {
+        errorText.style.display = 'none';
+        vinDisplay.innerText = val;
+        resultSection.style.display = 'block';
+        
+        // Generate high-density Code 128 format optimized for Midtronics laser lenses
+        JsBarcode("#barcode", val, {
             format: "CODE128",
-            width: 3, 
-            height: 90,
+            width: 2.8, 
+            height: 95,
             displayValue: true,
-            fontSize: 18,
+            fontSize: 16,
             background: "#ffffff",
             lineColor: "#000000",
             margin: 10
         });
-    }
+    });
 </script>
 
 </body>
