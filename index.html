@@ -226,7 +226,7 @@ function findVIN(inputString) {
     const match = inputString.match(vinRegex);
     
     // Returns the VIN if found, otherwise returns null
-    return match ? match[1] : null;
+    return match ? match[1] : inputString;
 }
 
 async function captureAndOCR() {
