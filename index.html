@@ -245,9 +245,9 @@ async function captureAndOCR() {
       }
     });
     const raw = result.data.text.toUpperCase();
-    const raw = findVIN(raw);
+    const rawVin = findVIN(raw);
     // Strip chars that OCR mis-reads: O→0, I→1, Q→0, keep only VIN-valid chars
-    const cleaned = raw.replace(/O/g,'0').replace(/I/g,'1').replace(/Q/g,'0')
+    const cleaned = rawVin.replace(/O/g,'0').replace(/I/g,'1').replace(/Q/g,'0')
       .replace(/[^A-HJ-NPR-Z0-9\s]/g,' ');
     // Pick the token closest to 17 chars
     const tokens = cleaned.split(/\s+/).filter(t => t.length >= 10);
@@ -259,7 +259,7 @@ async function captureAndOCR() {
     } else {
       setStatus('Could not read VIN clearly — type it in below', 'err');
     }
-    showVINStep(vin);
+    showVINStep(cleaned);
     setStatus('raw'+raw);
   } catch (e) {
     setStatus('OCR failed: ' + e.message, 'err');
